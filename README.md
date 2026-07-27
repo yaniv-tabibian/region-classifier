@@ -1,5 +1,11 @@
 # region-classifier
 
+[![CI](https://github.com/OWNER/region-classifier/actions/workflows/ci.yml/badge.svg)](https://github.com/OWNER/region-classifier/actions/workflows/ci.yml)
+![Python](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-blue)
+![License: MIT](https://img.shields.io/badge/license-MIT-green)
+
+> Replace `OWNER` in the CI badge above with your GitHub username after you push.
+
 Real-time classification of a moving GPS sensor as **In A**, **In B**, or
 **Outside**, using only the two *shortest-distance-to-boundary* streams
 `get_dist_a()` and `get_dist_b()` — no position is ever given to the classifier.
@@ -36,11 +42,24 @@ python -m venv .venv && source .venv/bin/activate
 pip install -e ".[viz,dev]"     # 'viz' adds matplotlib, 'dev' adds test/lint tools
 ```
 
+(Or `make install`. A `Makefile` wraps the common tasks: `make run`, `make test`,
+`make lint`, `make format`, `make demo`.)
+
+## Quick start (zero config)
+
+```bash
+region-sim            # runs a bundled default scenario, live in the console
+region-sim --version
+```
+
 ## Run
 
 ```bash
-# live console read-out (colour-coded), paced to wall-clock time
-region-sim --config configs/two_circles.yaml
+# runs with no arguments using the bundled default scenario
+region-sim
+
+# a specific scenario, checked every tick against ground truth
+region-sim --config configs/two_circles.yaml --no-realtime --validate
 
 # same, but check every tick against ground truth and print accuracy
 region-sim --config configs/two_circles.yaml --no-realtime --validate

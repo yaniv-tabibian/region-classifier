@@ -1,0 +1,7 @@
+# Runtime dependencies (see pyproject.toml for the authoritative list).
+# Preferred install:  pip install -e ".[viz,dev]"
+numpy>=1.23
+PyYAML>=6.0
+
+# Optional — only needed for the live plot / GIF (`--plot`, `--save-gif`):
+# matplotlib>=3.6

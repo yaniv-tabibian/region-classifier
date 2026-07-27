@@ -23,7 +23,7 @@ region-sim = "region_classifier.cli:main"
 where = ["src"]
 
 [tool.setuptools.package-data]
-region_classifier = ["py.typed"]
+region_classifier = ["py.typed", "data/*.yaml"]
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]

@@ -1,0 +1,18 @@
+# Bundled default scenario so `region-sim` runs with no arguments.
+# Two separated circular regions (a gap of Outside between them).
+seed: 42
+dt: 0.1
+duration_s: 90
+pasture: {xmin: -40, ymin: -40, xmax: 40, ymax: 40}
+
+regions:
+  A: {type: circle, center: [-15, 10], radius: 9}
+  B: {type: circle, center: [16, -8], radius: 6}
+
+motion:
+  mean_speed: 3.0
+  speed_sigma: 1.5
+  turn_sigma: 0.4
+
+noise:
+  distance_std: 0.0

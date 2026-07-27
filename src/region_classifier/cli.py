@@ -1,10 +1,20 @@
-"""Command-line entry point: ``region-sim --config configs/two_circles.yaml``."""
+"""Command-line entry point.
+
+Runs with no arguments using a bundled default scenario::
+
+    region-sim
+
+or with your own scenario file::
+
+    region-sim --config configs/two_circles.yaml
+"""
 
 from __future__ import annotations
 
 import argparse
 import sys
 
+from . import __version__
 from .config import SimConfig
 from .simulator import Tick, run
 
@@ -40,7 +50,12 @@ def main(argv: list[str] | None = None) -> int:
         description="Real-time In A / In B / Outside classification of a moving "
         "GPS sensor from shortest-distance-to-boundary streams.",
     )
-    ap.add_argument("--config", required=True, help="path to a YAML scenario file")
+    ap.add_argument("--version", action="version", version=f"region-sim {__version__}")
+    ap.add_argument(
+        "--config",
+        default=None,
+        help="path to a YAML scenario file (default: a bundled scenario)",
+    )
     ap.add_argument(
         "--duration", type=float, default=None, help="override duration in seconds"
     )
@@ -70,7 +85,11 @@ def main(argv: list[str] | None = None) -> int:
     args = ap.parse_args(argv)
 
     try:
-        config = SimConfig.load(args.config)
+        config = (
+            SimConfig.load(args.config)
+            if args.config is not None
+            else SimConfig.load_default()
+        )
     except (FileNotFoundError, ValueError) as exc:
         print(f"config error: {exc}", file=sys.stderr)
         return 2

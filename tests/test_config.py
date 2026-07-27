@@ -8,6 +8,12 @@ from region_classifier.geometry import Circle, Rectangle
 CONFIGS = Path(__file__).resolve().parents[1] / "configs"
 
 
+def test_bundled_default_config_loads():
+    cfg = SimConfig.load_default()
+    assert cfg.dt > 0 and cfg.duration_s > 0
+    assert cfg.region_a.inradius > 0 and cfg.region_b.inradius > 0
+
+
 def test_shape_factory():
     c = shape_from_dict({"type": "circle", "center": [1, 2], "radius": 3})
     assert isinstance(c, Circle) and c.r == 3

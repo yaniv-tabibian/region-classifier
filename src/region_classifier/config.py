@@ -8,6 +8,7 @@ a small schema check that raises clear errors on bad input.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from importlib import resources
 from pathlib import Path
 from typing import Any
 
@@ -117,4 +118,18 @@ class SimConfig:
             data = yaml.safe_load(fh)
         if not isinstance(data, dict):
             raise ValueError(f"config {path} must be a YAML mapping")
+        return cls.from_dict(data)
+
+    @classmethod
+    def load_default(cls) -> SimConfig:
+        """Load the scenario bundled inside the package (so the CLI runs with
+        no arguments and works after `pip install`, regardless of cwd)."""
+        text = (
+            resources.files("region_classifier")
+            .joinpath("data/default.yaml")
+            .read_text(encoding="utf-8")
+        )
+        data = yaml.safe_load(text)
+        if not isinstance(data, dict):
+            raise ValueError("bundled default config is not a YAML mapping")
         return cls.from_dict(data)
