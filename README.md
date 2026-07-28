@@ -35,6 +35,22 @@ recovered over time. Two ideas do it (see [`classifier.py`](src/region_classifie
 
 The algorithm is causal and **O(1)** in time and memory per sample.
 
+## Two cases (adjacent & separated) — assumption & design consequence
+
+"Disjoint" admits two geometries: **adjacent** (the regions share a border;
+gap = 0) and **separated** (a strip of Outside lies between them; gap > 0). This
+project treats the gap as a single **configurable parameter**, so both cases run
+from the **same code** with no special-casing — `configs/adjacent_bands.yaml` is
+the adjacent case, `configs/two_circles.yaml` the separated one — and `Outside`
+is a first-class state the classifier detects directly.
+
+The classifier is **online/stateful by necessity**: in the adjacent case the
+shared boundary makes a *single* distance snapshot ambiguous (near the shared
+edge, "In A" and "In B" look identical), so only the **time evolution** of
+`get_dist_a()` / `get_dist_b()` resolves it. That is why classification is done
+over time rather than per sample — and it is exactly what lets one general
+classifier cover both cases.
+
 ## Install
 
 ```bash
