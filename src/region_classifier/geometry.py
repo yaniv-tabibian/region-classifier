@@ -73,11 +73,12 @@ class Rectangle:
         return hypot(max(dx, 0.0), max(dy, 0.0))  # outside/on: distance to perimeter
 
     def contains(self, x: float, y: float) -> bool:
+        # strict '<': a point exactly on an edge is NOT contained (boundary -> Outside)
         return abs(x - self.cx) < self.w / 2.0 and abs(y - self.cy) < self.h / 2.0
 
     @property
     def inradius(self) -> float:
-        return min(self.w, self.h) / 2.0
+        return min(self.w / 2.0, self.h / 2.0)
 
     @property
     def bounds(self) -> tuple[float, float, float, float]:
@@ -174,6 +175,13 @@ class RegionField:
         return self.region_b.distance_to_boundary(x, y)
 
     def true_label(self, x: float, y: float) -> str:
+        # Strict-interior convention: contains() uses '<', so EVERY boundary --
+        # the outer edges, the Case-1 shared A|B line, and the Case-2 gap-facing
+        # inner edges (Right-A, Left-B) -- belongs to neither region and
+        # is reported Outside. On the shared line A = B = 0 (a measure-zero case);
+        # the online classifier instead holds the incumbent region there (see the
+        # hysteresis note in classifier.update). That lone on-line sample is a
+        # don't-care and never affects steady-state accuracy.
         if self.region_a.contains(x, y):
             return "In A"
         if self.region_b.contains(x, y):

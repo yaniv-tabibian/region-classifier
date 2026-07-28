@@ -17,6 +17,15 @@ decision is recovered over time from two mechanisms:
    threshold tracks the recent ``|Δd|`` and therefore self-scales with the
    (non-constant) speed.
 
+These two mechanisms are also what resolves the *adjacent* (shared-border) case,
+whose single snapshot is provably undecidable near the shared line (two mirror
+points report identical distances — see the design doc). At a shared-line
+crossing *both* distances dip to ~0 together, so both regions toggle and the
+membership flips A↔B; between crossings the state is simply carried forward. The
+one missing bit — which side of the shared line — is thus supplied by continuity
+rather than computed from a snapshot, so the output is **always** In A / In B /
+Outside and *never* "ambiguous".
+
 The algorithm is causal and O(1) in time and memory per sample.
 """
 
@@ -28,6 +37,13 @@ from math import inf
 
 @dataclass
 class _RegionState:
+    # `inside` is the carried membership bit for this region. It is the deliverable's
+    # equivalent of the `prev_state` argument in the analysis harness'
+    # resolve_band_with_state() (static_/unified_ classifier_test_harness.py): the one
+    # bit that resolves the adjacent-case undecidable band. Here it is kept implicitly
+    # across ticks and flipped by crossing detection instead of being passed in.
+    # Cold-started inside the band with no history, this bit is a guess until a clean
+    # crossing / outer-edge entry re-anchors it (measure-zero, self-correcting).
     inside: bool = False
     prev: float | None = None
     falling: bool = False
@@ -94,11 +110,22 @@ class RegionClassifier:
         """Feed one sample of both distances; return the current label."""
         self._update_region("a", d_a)
         self._update_region("b", d_b)
+        # Exact A|B shared line (Case 1): d_a == d_b == 0 -- a measure-zero instant.
+        # Neither region toggles until the ascending edge, so we hold the incumbent
+        # side and flip one sample AFTER the crossing (hysteresis): a moving sensor
+        # grazing an interior wall must not blink to Outside. Ground truth calls that
+        # lone on-line sample Outside; it is a don't-care that never affects steady state.
+        # Case 2 (gap g>0): no edge has both distances zero (A+B=g across the gap), so
+        # every border is an ordinary single-region crossing -- same incumbent +
+        # one-sample-flip, and no ambiguity (Case 2 is single-snapshot exact).
 
         sa, sb = self._st["a"], self._st["b"]
         if sa.inside and sb.inside:
-            # regions are disjoint: cannot be inside both. Keep the one we are
-            # deeper inside (larger distance to its own boundary).
+            # regions are disjoint: cannot be inside both. Safety tie-break for
+            # the adjacent-case band (the one provably-undecidable snapshot):
+            # keep the region we are deeper inside (larger distance to its own
+            # boundary). Normally the crossing-toggle already keeps exactly one
+            # side set, so this only fires as a fallback near the shared line.
             if d_a >= d_b:
                 sb.inside = False
             else:

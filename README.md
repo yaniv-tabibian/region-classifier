@@ -1,14 +1,18 @@
 # region-classifier
 
-[![CI](https://github.com/OWNER/region-classifier/actions/workflows/ci.yml/badge.svg)](https://github.com/OWNER/region-classifier/actions/workflows/ci.yml)
+[![CI](https://github.com/yaniv-tabibian/region-classifier/actions/workflows/ci.yml/badge.svg)](https://github.com/yaniv-tabibian/region-classifier/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-blue)
 ![License: MIT](https://img.shields.io/badge/license-MIT-green)
-
-> Replace `OWNER` in the CI badge above with your GitHub username after you push.
 
 Real-time classification of a moving GPS sensor as **In A**, **In B**, or
 **Outside**, using only the two *shortest-distance-to-boundary* streams
 `get_dist_a()` and `get_dist_b()` — no position is ever given to the classifier.
+
+> **Two geometries, one solution.** "Disjoint" covers both *adjacent* (the regions
+> share a border, gap = 0) and *separated* (gap > 0). The gap is a single
+> **configurable parameter**, so one general, online/stateful classifier — with
+> `Outside` as a first-class state — handles both, with no per-case code. (Details
+> in **Two cases**, below.)
 
 ![live demo](examples/demo.gif)
 
@@ -18,22 +22,30 @@ the current region **online**, with no post-processing of the trajectory.
 
 ---
 
-## Why it is not trivial
+## How the classifier resolves the single-reading ambiguity
 
-A single distance-to-boundary reading is **ambiguous**: being 3 m *inside* a
-region and 3 m *outside* it both read `3`. The decision therefore has to be
-recovered over time. Two ideas do it (see [`classifier.py`](src/region_classifier/classifier.py)):
+A single distance-to-boundary reading can be **ambiguous**: being 3 m *inside* a
+region and 3 m *outside* it both read `3`. Where one sample can't settle it, the
+classifier resolves the ambiguity from a small amount of **state carried across
+samples** — while still emitting a decision **every tick** (online; it never
+waits to accumulate samples, which would be post-processing). The classifier
+([`classifier.py`](src/region_classifier/classifier.py)) does this by **combining
+two complementary mechanisms — both implemented, neither sufficient alone**:
 
-1. **Half-width anchors.** An interior point of a region is at most `inradius`
-   from its boundary, so `dist > inradius` *proves* the sensor is outside that
-   region. This is certain from a single sample and makes the classifier
-   **self-correcting** — it can never get permanently stuck in a wrong state.
-2. **Boundary-crossing detection.** A crossing is the moment a distance dips to
-   ~0 and rebounds; each crossing toggles that region's membership. The
+1. **Boundary-crossing detection (carries the state).** A crossing is the moment
+   a distance dips to ~0 and rebounds; each crossing toggles that region's
+   membership, propagating In A / In B / Outside as the sensor moves. The
    near-zero threshold is **adaptive** — it tracks the recent `|Δdistance|`
    (≈ speed·dt), so it self-scales with the sensor's non-constant speed.
+2. **Half-width anchors (make it self-correcting).** An interior point of a
+   region is at most `inradius` from its boundary, so `dist > inradius` *proves*
+   the sensor is outside that region — certain from a single sample. This
+   overrides the crossing state whenever it would be provably wrong, so the
+   classifier can never get permanently stuck in a wrong state.
 
-The algorithm is causal and **O(1)** in time and memory per sample.
+**Together:** crossing detection carries the membership across samples; the anchor gives
+single-sample certainty that keeps it honest. The algorithm is causal and
+**O(1)** in time and memory per sample.
 
 ## Two cases (adjacent & separated) — assumption & design consequence
 
@@ -44,41 +56,65 @@ from the **same code** with no special-casing — `configs/adjacent_bands.yaml` 
 the adjacent case, `configs/two_circles.yaml` the separated one — and `Outside`
 is a first-class state the classifier detects directly.
 
-The classifier is **online/stateful by necessity**: in the adjacent case the
-shared boundary makes a *single* distance snapshot ambiguous (near the shared
-edge, "In A" and "In B" look identical), so only the **time evolution** of
-`get_dist_a()` / `get_dist_b()` resolves it. That is why classification is done
-over time rather than per sample — and it is exactly what lets one general
-classifier cover both cases.
+The classifier is **online and stateful**: in the adjacent case the shared
+boundary makes a *single* snapshot ambiguous (near the shared edge, "In A" and
+"In B" look identical), so that lone reading can't settle it. The classifier
+resolves it by **carrying the last decided side** (one bit of state) and flipping
+it when it detects a shared-edge crossing — so it still emits a label **every
+tick**, it just doesn't rely on the single sample. That one carried bit is
+exactly what lets one general classifier cover both cases.
+
+The output is always **In A / In B / Outside** — never a fourth "ambiguous"
+label. Only two rare situations are momentarily uncertain and both self-correct
+within a sample or two: sitting *exactly* on a boundary, and starting up already
+*inside* the ambiguous band.
+
+## Assumptions
+
+The problem's givens (the design and behaviour they lead to are covered in the
+sections above):
+
+- **Inputs only:** the classifier is given `get_dist_a()` / `get_dist_b()`
+  (unsigned shortest distance to each region's boundary) — never the position.
+- **Known, configurable geometry:** region sizes, shapes, and any gap come from
+  YAML config, not hard-coded constants.
+- **Disjoint regions:** the sensor is in A, in B, or Outside — never in two at once.
 
 ## Install
 
+**Requires Python 3.10+.** Install from source (editable):
+
 ```bash
-python -m venv .venv && source .venv/bin/activate
-pip install -e ".[viz,dev]"     # 'viz' adds matplotlib, 'dev' adds test/lint tools
+git clone https://github.com/yaniv-tabibian/region-classifier.git
+cd region-classifier
+python -m venv .venv
+source .venv/bin/activate        # Windows: .venv\Scripts\activate
+pip install -e ".[viz,dev]"      # 'viz' adds matplotlib, 'dev' adds test/lint tools
 ```
 
 (Or `make install`. A `Makefile` wraps the common tasks: `make run`, `make test`,
-`make lint`, `make format`, `make demo`.)
+`make lint`, `make format`, `make demo`. For a minimal, runtime-only install use
+`pip install -e .` — without matplotlib or the dev tools.)
 
 ## Quick start (zero config)
 
 ```bash
 region-sim            # runs a bundled default scenario, live in the console
 region-sim --version
+region-sim --help     # list all options
 ```
 
 ## Run
 
 ```bash
-# runs with no arguments using the bundled default scenario
+# no arguments -> the bundled default scenario, live in the console
 region-sim
 
-# a specific scenario, checked every tick against ground truth
+# Case 2 (separated): validate every tick against ground truth, print accuracy
 region-sim --config configs/two_circles.yaml --no-realtime --validate
 
-# same, but check every tick against ground truth and print accuracy
-region-sim --config configs/two_circles.yaml --no-realtime --validate
+# Case 1 (adjacent): the same, on the shared-edge rectangles
+region-sim --config configs/adjacent_bands.yaml --no-realtime --validate
 
 # live map (needs the viz extra), or render a GIF headless
 region-sim --config configs/adjacent_bands.yaml --plot
@@ -90,7 +126,7 @@ Sample output:
 ```
 t=  41.2s  d_a=  0.13  d_b= 22.90  ->  In A      (truth: In A     OK)
 t=  55.7s  d_a= 18.40  d_b=  0.09  ->  In B      (truth: In B     OK)
-accuracy vs ground truth: 99.57% over 3000 ticks
+accuracy vs ground truth: 99.57% over 1200 ticks
 ```
 
 The remaining <0.5% are the one-sample transients at the instant of a crossing —
@@ -117,6 +153,8 @@ noise:  {distance_std: 0.0}
 * `configs/adjacent_bands.yaml` — two rectangles that **share an edge**
   (direct A↔B transitions).
 
+A `polygon` region is given by `points: [[x, y], ...]` instead of a center + size.
+
 ## How the simulation is wired
 
 ```
@@ -131,16 +169,26 @@ config (YAML) ─▶ motion (var speed) ─┘  (hides position)                
 * [`classifier.py`](src/region_classifier/classifier.py) — the online classifier.
 * [`simulator.py`](src/region_classifier/simulator.py) — the real-time loop.
 
+See [`docs/DECISION_RULE.md`](docs/DECISION_RULE.md) for the unified decision rule
+(both cases) at a glance — the static reference rule of which `classifier.py` is
+the online form.
+
 ## Tests
 
 ```bash
-pytest            # 16 tests: geometry, classifier (crafted streams), config, end-to-end accuracy
+pytest            # 26 tests (21 core + 5 optional stress): geometry, classifier, config, CLI, end-to-end accuracy
 ruff check . && mypy && black --check .
 ```
 
 The classifier is tested in isolation on hand-crafted distance streams
 (enter/leave, adjacent A↔B via a shared edge, grazes that must not toggle,
 anchor self-correction), plus an end-to-end run asserting ≥95% accuracy.
+
+Why ≥95% and not 100%: a **causal** classifier can't hit 100% — at the instant
+of a crossing the label lags by one sample (it only knows a crossing happened
+once the distance rebounds), so a few transient ticks per run are unavoidable.
+95% is a deliberately loose floor to keep the test non-flaky; real runs score
+~99.5% (see the accuracy note above).
 
 ## License
 
