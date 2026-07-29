@@ -80,9 +80,22 @@ tick**, it just doesn't rely on the single sample. That one carried bit is
 exactly what lets one general classifier cover both cases.
 
 The output is always **In A / In B / Outside** — never a fourth "ambiguous"
-label. Only two rare situations are momentarily uncertain and both self-correct
-within a sample or two: sitting *exactly* on a boundary, and starting up already
-*inside* the ambiguous band.
+label. Two situations are genuinely uncertain, and they recover on different
+timescales:
+
+* **Sitting exactly on a boundary** — resolves within a sample or two, as soon as
+  the sensor moves off the line.
+* **Cold-starting already inside a region** — takes longer, and it is worth being
+  precise about why. The classifier begins with both membership bits `False`
+  (i.e. Outside), which is correct for the shipped scenarios: the sensor starts at
+  a corner of the field. Started *inside* a region instead, the first boundary
+  exit inverts that region's bit (a dip-and-rebound reads as an entry), and only
+  the half-width anchor can reset it — which requires the sensor to travel more
+  than one `inradius` clear of that region. Measured over 540 randomised
+  cold-start-inside scenarios: median **173 ticks** to lock on, 90th percentile
+  **435**. So this is "self-corrects once the sensor gets an inradius away", not
+  "within a sample or two". Seeding the initial state from the first reading would
+  shorten it; the shipped default is chosen to match how the simulator starts.
 
 ## Assumptions
 
