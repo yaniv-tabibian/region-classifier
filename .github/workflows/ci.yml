@@ -6,6 +6,30 @@ on:
   pull_request:
 
 jobs:
+  # Lint + type-check once, against the SOURCE tree in src/. The package is
+  # deliberately NOT installed here: an editable (PEP 660) install confuses
+  # mypy's package discovery on some runners (it was failing only on 3.12).
+  # mypy resolves `region_classifier` via mypy_path=src (see pyproject.toml).
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install tools + runtime deps (not the package)
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt ruff black mypy
+      - name: Lint (ruff)
+        run: ruff check .
+      - name: Format check (black)
+        run: black --check src tests
+      - name: Type check (mypy)
+        run: mypy
+
+  # Tests across Python versions. pytest imports from src/ via
+  # pythonpath=src, so the editable install here only pulls dependencies.
   test:
     runs-on: ubuntu-latest
     strategy:
@@ -21,15 +45,5 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -e ".[dev]"
-          # Check the source tree under src/ (mypy_path / pytest pythonpath), not the
-          # editable install — its PEP 660 finder breaks mypy's package discovery on
-          # some runners (was failing only on 3.12).
-          pip uninstall -y region-classifier
-      - name: Lint (ruff)
-        run: ruff check .
-      - name: Format check (black)
-        run: black --check src tests
-      - name: Type check (mypy)
-        run: mypy
       - name: Tests
         run: pytest -q
