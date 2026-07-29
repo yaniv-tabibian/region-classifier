@@ -104,6 +104,8 @@ def main(argv: list[str] | None = None) -> int:
     if args.plot or args.save_gif:
         try:
             from .visualize import run_live
+
+            run_live(config, save_gif=args.save_gif)
         except ImportError:
             print(
                 "matplotlib is required for --plot/--save-gif: "
@@ -111,7 +113,6 @@ def main(argv: list[str] | None = None) -> int:
                 file=sys.stderr,
             )
             return 2
-        run_live(config, save_gif=args.save_gif)
         return 0
 
     reporter = _make_console_reporter(args.validate, color=not args.no_color)
