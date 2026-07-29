@@ -42,3 +42,11 @@ mypy_path = "src"
 explicit_package_bases = true
 packages = ["region_classifier"]
 ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+# The newest numpy stubs use PEP 695 `type X = ...` (valid only on 3.12+), which
+# mypy rejects while parsing numpy under our 3.10 target. We don't type-check
+# numpy's internals anyway, so skip following it.
+module = ["numpy", "numpy.*"]
+follow_imports = "skip"
+follow_imports_for_stubs = true
