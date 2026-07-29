@@ -14,16 +14,26 @@ given the known widths and the gap `g` — `g = 0` for **Case 1** (adjacent),
 
 ## The rule
 
-| Branch on `D = B − A`  (g ≥ 0) | Result | Case 1 (g = 0) reduces to |
-|---|---|---|
-| `D ≥ W(A) + g` | Outside (left of A) | `D = W(A)` |
-| `g < D < W(A) + g` | In A | `0 < D < W(A)` |
-| `D = g`  (g > 0) | In A  (A inner-edge plateau) | folds into `D = 0` |
-| `−g < D < g`  (g > 0) | Outside (the gap) | folds into `D = 0` |
-| `D = −g`  (g > 0) | In B  (B inner-edge plateau) | — |
-| `−(W(B)+g) < D < −g` | In B | `−W(B) < D < 0` |
-| `D ≤ −(W(B) + g)` | Outside (right of B) | `D = −W(B)` |
-| `D = 0`  (only when g = 0) | In A or In B if the widths decide it; else keep the last side — never "Ambiguous" | on the shared A/B edge |
+```text
+┌────────────────────────────────┬──────────────────────────────┬───────────────────────────┐
+│ Branch on  D = B − A   (g ≥ 0) │ Result                       │ Case 1 (g = 0) reduces to │
+├────────────────────────────────┼──────────────────────────────┼───────────────────────────┤
+│ D ≥ W(A) + g                   │ Outside (left of A)          │ D = W(A)                  │
+│ g < D < W(A) + g               │ In A                         │ 0 < D < W(A)              │
+│ D = g    (g > 0)               │ In A  (A inner-edge plateau) │ folds into D = 0          │
+│ −g < D < g    (g > 0)          │ Outside (the gap)            │ folds into D = 0          │
+│ D = −g    (g > 0)              │ In B  (B inner-edge plateau) │ —                         │
+│ −(W(B)+g) < D < −g             │ In B                         │ −W(B) < D < 0             │
+│ D ≤ −(W(B) + g)                │ Outside (right of B)         │ D = −W(B)                 │
+│ D = 0    (only when g = 0)     │ In A or In B  (see note)     │ on the shared A/B edge    │
+└────────────────────────────────┴──────────────────────────────┴───────────────────────────┘
+```
+
+> **Note — the `D = 0` row (shared A/B edge, g = 0 only).** The half-width caps
+> decide it where they can (`t > W(B)/2` → In A, `t > W(A)/2` → In B); inside the
+> remaining band a lone snapshot is undecidable, so the rule keeps the last
+> decided side. The output is therefore **always** In A / In B / Outside —
+> **never** a fourth "Ambiguous" label.
 
 ## The function
 
