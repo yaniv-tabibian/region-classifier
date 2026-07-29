@@ -9,10 +9,11 @@ Real-time classification of a moving GPS sensor as **In A**, **In B**, or
 `get_dist_a()` and `get_dist_b()` — no position is ever given to the classifier.
 
 > **Two geometries, one solution.** "Disjoint" covers both *adjacent* (the regions
-> share a border, gap = 0) and *separated* (gap > 0). The gap is a single
-> **configurable parameter**, so one general, online/stateful classifier — with
-> `Outside` as a first-class state — handles both, with no per-case code. (Details
-> in **Two cases**, below.)
+> share a border, gap = 0) and *separated* (gap > 0). Rather than two code paths,
+> the gap is treated as **one parameter of a single problem** — and the shipped
+> classifier does not even need its value: one general, online/stateful classifier,
+> with `Outside` as a first-class state, handles both with no per-case code.
+> (Details in **Two cases**, below.)
 
 ![live demo](examples/demo.gif)
 
@@ -51,10 +52,24 @@ single-sample certainty that keeps it honest. The algorithm is causal and
 
 "Disjoint" admits two geometries: **adjacent** (the regions share a border;
 gap = 0) and **separated** (a strip of Outside lies between them; gap > 0). This
-project treats the gap as a single **configurable parameter**, so both cases run
+project treats them as **one parameterised problem** rather than two, so both run
 from the **same code** with no special-casing — `configs/adjacent_bands.yaml` is
 the adjacent case, `configs/two_circles.yaml` the separated one — and `Outside`
 is a first-class state the classifier detects directly.
+
+Worth being precise about where the gap lives, since it works out stronger than
+"a config option":
+
+* **In the decision rule** ([`docs/DECISION_RULE.md`](docs/DECISION_RULE.md)) the
+  gap is an explicit parameter `g`, and the whole rule is written once over
+  `g ≥ 0`; `g = 0` collapses the gap branches into the shared-edge case. There is
+  no `if adjacent … else …` anywhere — the algebra covers both.
+* **In the config** there is no `gap:` key, because none is needed: the gap is
+  wherever the YAML places the two regions relative to each other. Move `B`'s
+  centre and you have changed the gap.
+* **In the shipped classifier** the gap is never supplied at all. It receives only
+  the two distance streams plus each region's `inradius`, so it works on either
+  geometry without being told which one it is facing.
 
 The classifier is **online and stateful**: in the adjacent case the shared
 boundary makes a *single* snapshot ambiguous (near the shared edge, "In A" and
@@ -76,8 +91,8 @@ sections above):
 
 - **Inputs only:** the classifier is given `get_dist_a()` / `get_dist_b()`
   (unsigned shortest distance to each region's boundary) — never the position.
-- **Known, configurable geometry:** region sizes, shapes, and any gap come from
-  YAML config, not hard-coded constants.
+- **Known, configurable geometry:** region sizes, shapes, and positions — and so
+  any gap between them — come from YAML config, not hard-coded constants.
 - **Disjoint regions:** the sensor is in A, in B, or Outside — never in two at once.
 
 ## Install
@@ -171,7 +186,10 @@ config (YAML) ─▶ motion (var speed) ─┘  (hides position)                
 
 See [`docs/DECISION_RULE.md`](docs/DECISION_RULE.md) for the unified decision rule
 (both cases) at a glance — the static reference rule of which `classifier.py` is
-the online form.
+the online form. That rule is independently verified against ground truth by the
+harnesses in [`tools/`](tools) (see [`tools/README.md`](tools/README.md)): 560,000
+samples per case, 0 confident-wrong and 0 wrongly-abstained, plus an impossibility
+proof for why the adjacent case needs one bit of state.
 
 ## Tests
 

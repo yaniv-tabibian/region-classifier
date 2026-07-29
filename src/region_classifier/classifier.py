@@ -37,11 +37,11 @@ from math import inf
 
 @dataclass
 class _RegionState:
-    # `inside` is the carried membership bit for this region. It is the deliverable's
-    # equivalent of the `prev_state` argument in the analysis harness'
-    # resolve_band_with_state() (static_/unified_ classifier_test_harness.py): the one
-    # bit that resolves the adjacent-case undecidable band. Here it is kept implicitly
-    # across ticks and flipped by crossing detection instead of being passed in.
+    # `inside` is the carried membership bit for this region. It is the run-time
+    # equivalent of the `prev_state` argument to resolve_band_with_state() in
+    # tools/unified_static_classifier_test_harness.py: the one bit that resolves the
+    # adjacent-case undecidable band. Here it is kept implicitly across ticks and
+    # flipped by crossing detection instead of being passed in.
     # Cold-started inside the band with no history, this bit is a guess until a clean
     # crossing / outer-edge entry re-anchors it (measure-zero, self-correcting).
     inside: bool = False

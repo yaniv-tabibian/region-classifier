@@ -5,8 +5,9 @@ given the known widths and the gap `g` — `g = 0` for **Case 1** (adjacent),
 `g > 0` for **Case 2** (separated).
 
 > **Static reference rule.** The table and function below are the *single-snapshot*
-> rule (one reading → one label), used by `unified_static_classifier_test_harness.py`
-> to verify the geometry. The shipped run-time classifier
+> rule (one reading → one label), verified against ground truth by
+> [`tools/unified_static_classifier_test_harness.py`](../tools/unified_static_classifier_test_harness.py)
+> (see [`tools/README.md`](../tools/README.md)). The shipped run-time classifier
 > [`src/region_classifier/classifier.py`](../src/region_classifier/classifier.py)
 > is its **online equivalent**: it never sees `D` directly — it tracks each
 > region's boundary via crossing detection + half-width anchors and carries the

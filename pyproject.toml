@@ -36,6 +36,13 @@ target-version = "py310"
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
 
+[tool.ruff.lint.per-file-ignores]
+# tools/ holds the standalone verification harnesses, kept close to how they were
+# authored so they stay checkable line-by-line against docs/DECISION_RULE.md: the
+# aligned one-line branches (E701) mirror the rule table row-for-row, and the wide
+# diagnostic print()s (E501) keep each test's output on one line.
+"tools/*" = ["E501", "E701"]
+
 [tool.mypy]
 python_version = "3.10"
 mypy_path = "src"
